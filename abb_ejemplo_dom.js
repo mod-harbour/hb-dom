@@ -111,11 +111,7 @@ class Element {
                     if (this.namespace === HTML_NAMESPACE && PLAINTEXT_ELEMENTS.includes(this.name)) {
                         ret += child;
                     } else {
-                        ret += child
-                            .replace(/&/g, "&amp;")
-                            .replace(/\xA0/g, "&nbsp;")
-                            .replace(/</g, "&lt;")
-                            .replace(/>/g, "&gt;");
+                        ret += escapeText(child);
                     }
                 } else {
                     ret += child.render();
@@ -156,8 +152,22 @@ class DocumentFragment {
     render() {
         let ret = "";
         for (const child of this.children) {
-            ret += child.render();
+            if (typeof child == "string") {
+                ret += escapeText(child);
+            } else {
+                ret += child.render();
+            }
         }
         return ret;
     }
+}
+
+function escapeText(text) {
+    return (
+        text
+            .replace(/&/g, "&amp;")
+            .replace(/\xA0/g, "&nbsp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+    );
 }
