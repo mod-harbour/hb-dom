@@ -96,7 +96,11 @@ class Element {
             ret += " " + attribute.render();
         }
         ret += ">";
-        if (!this.serializesAsVoid()) {
+        if (this.serializesAsVoid()) {
+            if (this.renderContents() !== "") {
+                throw new Error(`${this.name} elements must be empty.`);
+            }
+        } else {
             ret += this.renderContents();
             ret += "</" + tagname + ">";
         }
@@ -104,21 +108,26 @@ class Element {
     }
     renderContents() {
         let ret = "";
-        if (!this.serializesAsVoid()) {
-            for (const child of this.children) {
-                // TODO: indent
-                if (typeof child == "string") {  // Text node
-                    if (this.namespace === HTML_NAMESPACE && PLAINTEXT_ELEMENTS.includes(this.name)) {
-                        ret += child;
-                    } else {
-                        ret += escapeText(child);
-                    }
-                } else {
-                    ret += child.render();
+        for (const child of this.children) {
+            // TODO: indent
+            if (this.isPlaintextElement()) {
+                if (typeof child != "string") {
+                    throw new Error(`${this.name} elements must only contain text.`);
                 }
+                ret += child;
+            } else if (typeof child == "string") {  // Text node
+                ret += escapeText(child);
+            } else {
+                ret += child.render();
             }
         }
+        if (this.isPlaintextElement() && ret.includes(`</${this.name}>`)) {
+            throw new Error(`${this.name} elements can't contain the "</${this.name}>" text.`);
+        }
         return ret;
+    }
+    isPlaintextElement() {
+        return this.namespace === HTML_NAMESPACE && PLAINTEXT_ELEMENTS.includes(this.name);
     }
     serializesAsVoid() {
         return this.namespace === HTML_NAMESPACE && VOID_ELEMENTS.includes(this.name);
@@ -130,6 +139,9 @@ class Comment {
         this.data = data;
     }
     render() {
+        if (this.data.includes("-->")) {
+            throw new Error(`Comments can't contain the string "-->".`);
+        }
         return "<!--" + this.data + "-->";
     }
 }
